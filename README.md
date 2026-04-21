@@ -14,11 +14,18 @@ For comparison, we also evaluate other widely used beat trackers — `librosa` a
 
 ## Dataset
 
-The **Jazz Trio Database** (Cheston et al., 2024) is a corpus of ~45 hours of historic jazz piano-trio recordings (piano, bass, drums) with frame-level annotations for beats, downbeats, and per-instrument onsets. It spans roughly 1950s–2010s recordings from a wide range of pianists and rhythm sections, which gives meaningful coverage of jazz performance practice — swing eighths, tempo drift, soloist push/pull against the rhythm section, and recording-era timbral differences.
+The **Jazz Trio Database** (Cheston et al., 2024) is a corpus of jazz piano-trio recordings (piano, bass, drums) with frame-level annotations for beats, downbeats, and per-instrument onsets.
 
-For this project the relevant labels are the beat and downbeat annotations, which were produced and human-verified specifically to support beat-tracking research. The dataset is distributed with stem-level audio and timing annotations under an open license on Zenodo.
+### Version 02 (Expanded Local Corpus)
+This project utilizes the `jazz-trio-database-v02`, which contains **1294 jazz trio performances**. It spans recordings from the 1950s–2010s, providing meaningful coverage of jazz performance practice — swing eighths, tempo drift, soloist push/pull against the rhythm section, and recording-era timbral differences.
 
-- Dataset: <https://zenodo.org/records/13828030>
+Each performance directory within the database contains:
+- `beats.csv`: Human-verified beat and downbeat annotations.
+- `piano_onsets.csv`, `bass_onsets.csv`, `drums_onsets.csv`: Onset times for each instrument.
+- `piano_midi.mid`: MIDI representation of the piano performance.
+- `metadata.json`: Track details including artist, album, year, and estimated tempo.
+
+- Zenodo Record (v1): <https://zenodo.org/records/13828030>
 - Beat This! pretrained model checkpoint: <https://cloud.cp.jku.at/index.php/s/7ik4RrBKTS273gp>
 
 ## Repository contents

@@ -33,8 +33,22 @@ from beat_this.inference import File2Beats
 
 AUDIO_EXTS = (".wav", ".flac", ".mp3", ".ogg", ".m4a")
 
-BEAT_METRICS = ("F-measure", "Cemgil", "Goto", "P-score",
-                "CMLc", "CMLt", "AMLc", "AMLt", "Information gain")
+# Column name -> exact key returned by mir_eval.beat.evaluate.
+# mir_eval spells the continuity scores out in full ("Correct Metric Level
+# Continuous"), so a previous version of this script that looked them up by
+# their short names ("CMLc", ...) always got NaN back. Always use this map.
+BEAT_METRIC_KEYS = {
+    "F-measure":        "F-measure",
+    "Cemgil":           "Cemgil",
+    "Goto":             "Goto",
+    "P-score":          "P-score",
+    "CMLc":             "Correct Metric Level Continuous",
+    "CMLt":             "Correct Metric Level Total",
+    "AMLc":             "Any Metric Level Continuous",
+    "AMLt":             "Any Metric Level Total",
+    "Information gain": "Information gain",
+}
+BEAT_METRICS = tuple(BEAT_METRIC_KEYS)
 
 
 def find_audio(track_id: str, audio_root: Path) -> Path | None:
@@ -69,11 +83,12 @@ def load_ground_truth(beats_csv: Path) -> tuple[np.ndarray, np.ndarray]:
 
 
 def evaluate_one(gt: np.ndarray, est: np.ndarray) -> dict:
-    """Run mir_eval.beat.evaluate; return {} if either side is empty."""
+    """Run mir_eval.beat.evaluate, returning the metrics keyed by short name."""
     if len(gt) == 0 or len(est) == 0:
         return {m: float("nan") for m in BEAT_METRICS}
     scores = mir_eval.beat.evaluate(gt, est)
-    return {m: float(scores.get(m, float("nan"))) for m in BEAT_METRICS}
+    return {col: float(scores.get(key, float("nan")))
+            for col, key in BEAT_METRIC_KEYS.items()}
 
 
 def already_done(output_path: Path) -> set[str]:

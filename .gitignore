@@ -1,2 +1,5 @@
 jazz-trio-database-v02
 /modifier
+__pycache__/
+*.pyc
+slurm-*.out

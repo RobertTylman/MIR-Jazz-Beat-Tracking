@@ -34,3 +34,5 @@ def plot_beats(audio_path, beats, downbeats):
 
     plt.tight_layout()
     plt.show()
+
+

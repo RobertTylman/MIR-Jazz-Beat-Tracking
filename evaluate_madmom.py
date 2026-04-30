@@ -1,20 +1,5 @@
 """
-Evaluate Beat This! on the Jazz Trio Database (v02).
-
-For each track directory under --data-root, locate the matching audio file
-under --audio-root, run Beat This! inference, score predictions against the
-ground-truth beats.csv with mir_eval, and write per-track results to CSV.
-
-The script is resume-safe: rerunning with the same --output skips tracks that
-are already present.
-
-Example (NYU HPC):
-    python evaluate_jtd.py \
-        --data-root  /scratch/$USER/jazz-trio-database-v02 \
-        --audio-root /scratch/$USER/jtd-audio \
-        --checkpoint ./beat_this/checkpoint/final0.ckpt \
-        --output     results/beat_this_jtd.csv \
-        --device     cuda
+Evaluate madmom's DBN beat tracker on the Jazz Trio Database.
 """
 
 import argparse
@@ -27,16 +12,11 @@ from pathlib import Path
 import mir_eval
 import numpy as np
 import pandas as pd
-
-from beat_this.inference import File2Beats
+from madmom.features.beats import DBNDownBeatTrackingProcessor, DBNBeatTrackingProcessor
 
 
 AUDIO_EXTS = (".wav", ".flac", ".mp3", ".ogg", ".m4a")
 
-# Column name -> exact key returned by mir_eval.beat.evaluate.
-# mir_eval spells the continuity scores out in full ("Correct Metric Level
-# Continuous"), so a previous version of this script that looked them up by
-# their short names ("CMLc", ...) always got NaN back. Always use this map.
 BEAT_METRIC_KEYS = {
     "F-measure":        "F-measure",
     "Cemgil":           "Cemgil",
@@ -52,13 +32,10 @@ BEAT_METRICS = tuple(BEAT_METRIC_KEYS)
 
 
 def find_audio(track_id: str, audio_root: Path) -> Path | None:
-    """Look for <track_id>.<ext> under audio_root (recursive)."""
     for ext in AUDIO_EXTS:
-        # fast path: flat layout
         flat = audio_root / f"{track_id}{ext}"
         if flat.is_file():
             return flat
-    # fall back to recursive search
     for ext in AUDIO_EXTS:
         hits = list(audio_root.rglob(f"{track_id}{ext}"))
         if hits:
@@ -67,16 +44,10 @@ def find_audio(track_id: str, audio_root: Path) -> Path | None:
 
 
 def load_ground_truth(beats_csv: Path) -> tuple[np.ndarray, np.ndarray]:
-    """Return (gt_beats, gt_downbeats) in seconds.
-
-    beats.csv columns: index, beats, piano, bass, drums, metre_auto
-    A row is a downbeat when metre_auto == 1.
-    """
     df = pd.read_csv(beats_csv)
     beats = df["beats"].to_numpy(dtype=np.float64)
     mask = df["metre_auto"].to_numpy(dtype=np.float64) == 1.0
     downbeats = beats[mask]
-    # mir_eval requires sorted, finite times
     beats = np.sort(beats[np.isfinite(beats)])
     downbeats = np.sort(downbeats[np.isfinite(downbeats)])
     return beats, downbeats
@@ -85,7 +56,6 @@ def load_ground_truth(beats_csv: Path) -> tuple[np.ndarray, np.ndarray]:
 def evaluate_one(gt: np.ndarray, est: np.ndarray,
                  gt_down: np.ndarray | None = None,
                  est_down: np.ndarray | None = None) -> dict:
-    """Run mir_eval.beat.evaluate, returning the metrics keyed by short name."""
     if len(gt) == 0 or len(est) == 0:
         return {m: float("nan") for m in BEAT_METRICS}
     scores = mir_eval.beat.evaluate(gt, est,
@@ -106,26 +76,15 @@ def already_done(output_path: Path) -> set[str]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--data-root", required=True, type=Path,
-                   help="Path to jazz-trio-database-v02 (track dirs).")
-    p.add_argument("--audio-root", required=True, type=Path,
-                   help="Directory containing audio files named <track_id>.<ext>.")
-    p.add_argument("--checkpoint", default="final0",
-                   help="Beat This! checkpoint path or shortname (default: final0).")
-    p.add_argument("--output", required=True, type=Path,
-                   help="Per-track results CSV (created/appended).")
-    p.add_argument("--device", default="cuda",
-                   help="torch device: cuda | cpu | cuda:0 (default: cuda).")
-    p.add_argument("--dbn", action="store_true",
-                   help="Use madmom DBN postprocessing instead of minimal peak picking.")
-    p.add_argument("--float16", action="store_true",
-                   help="Use float16 inference (GPU recommended).")
-    p.add_argument("--limit", type=int, default=None,
-                   help="Only evaluate the first N tracks (for smoke tests).")
-    p.add_argument("--save-preds-dir", type=Path, default=None,
-                   help="If set, write predicted beats/downbeats per track here.")
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--data-root", required=True, type=Path)
+    p.add_argument("--audio-root", required=True, type=Path)
+    p.add_argument("--output", required=True, type=Path)
+    p.add_argument("--downbeats", action="store_true",
+                   help="Track downbeats instead of beats.")
+    p.add_argument("--fps", type=int, default=100,
+                   help="Processing FPS (default: 100).")
+    p.add_argument("--limit", type=int, default=None)
     args = p.parse_args()
 
     if not args.data_root.is_dir():
@@ -133,8 +92,6 @@ def main() -> int:
     if not args.audio_root.is_dir():
         sys.exit(f"--audio-root not found: {args.audio_root}")
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    if args.save_preds_dir:
-        args.save_preds_dir.mkdir(parents=True, exist_ok=True)
 
     track_dirs = sorted(d for d in args.data_root.iterdir()
                         if d.is_dir() and (d / "beats.csv").is_file())
@@ -145,6 +102,13 @@ def main() -> int:
     done = already_done(args.output)
     if done:
         print(f"Resuming: {len(done)} tracks already in {args.output}.", flush=True)
+
+    # Initialize madmom processor
+    if args.downbeats:
+        tracker = DBNDownBeatTrackingProcessor(fps=args.fps)
+    else:
+        tracker = DBNBeatTrackingProcessor(fps=args.fps)
+    print(f"Loaded madmom {'downbeat' if args.downbeats else 'beat'} tracker.", flush=True)
 
     fieldnames = ["track_id", "audio_path", "n_gt_beats", "n_pred_beats",
                   "n_gt_downbeats", "n_pred_downbeats", "infer_seconds", "status"]
@@ -157,13 +121,6 @@ def main() -> int:
     if write_header:
         writer.writeheader()
         out_f.flush()
-
-    print(f"Loading Beat This! ({args.checkpoint}) on {args.device}...", flush=True)
-    file2beats = File2Beats(checkpoint_path=args.checkpoint,
-                            device=args.device,
-                            float16=args.float16,
-                            dbn=args.dbn)
-    print("Model ready.", flush=True)
 
     n_ok = n_skip = n_fail = 0
     for i, tdir in enumerate(track_dirs, 1):
@@ -195,16 +152,25 @@ def main() -> int:
             row["n_gt_downbeats"] = int(len(gt_downbeats))
 
             t0 = time.perf_counter()
-            pred_beats, pred_downbeats = file2beats(str(audio_path))
+            activations = tracker(audio_path)
             row["infer_seconds"] = round(time.perf_counter() - t0, 3)
+
+            # activations is Nx2: (time, probability)
+            est_times = activations[:, 0]
+            
+            # For beat tracking: all activations are beats
+            # For downbeat tracking: activations with probability > 0.5 are downbeats
+            if args.downbeats:
+                pred_beats = est_times  # all activations as beats
+                pred_downbeats = est_times[activations[:, 1] > 0.5]
+            else:
+                pred_beats = est_times
+                pred_downbeats = np.array([])  # no downbeats in beat mode
+
             pred_beats = np.asarray(pred_beats, dtype=np.float64)
             pred_downbeats = np.asarray(pred_downbeats, dtype=np.float64)
             row["n_pred_beats"] = int(len(pred_beats))
             row["n_pred_downbeats"] = int(len(pred_downbeats))
-
-            if args.save_preds_dir:
-                np.savez(args.save_preds_dir / f"{track_id}.npz",
-                         beats=pred_beats, downbeats=pred_downbeats)
 
             for m, v in evaluate_one(gt_beats, pred_beats,
                                       gt_downbeats, pred_downbeats).items():

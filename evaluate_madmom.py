@@ -2,6 +2,30 @@
 Evaluate madmom's DBN beat tracker on the Jazz Trio Database.
 """
 
+# ==============================================================================
+# MONKEY PATCHES FOR MODERN PYTHON (3.10+) AND NUMPY (1.24+)
+# ==============================================================================
+import collections
+import collections.abc
+import numpy as np
+
+collections.MutableSequence = collections.abc.MutableSequence
+np.float = float
+np.int = int
+
+# This fixes the "setting an array element with a sequence" error when 
+# madmom tries to test multiple time signatures (like 3/4 and 4/4).
+_original_asarray = np.asarray
+def _patched_asarray(a, dtype=None, order=None, *, device=None, copy=None, like=None):
+    try:
+        return _original_asarray(a, dtype=dtype, order=order, like=like)
+    except ValueError as e:
+        if "inhomogeneous shape" in str(e) or "sequence" in str(e):
+            return _original_asarray(a, dtype=object, order=order, like=like)
+        raise e
+np.asarray = _patched_asarray
+# ==============================================================================
+
 import argparse
 import csv
 import sys
@@ -10,10 +34,10 @@ import traceback
 from pathlib import Path
 
 import mir_eval
-import numpy as np
 import pandas as pd
-from madmom.features.beats import DBNDownBeatTrackingProcessor, DBNBeatTrackingProcessor
-
+from madmom.processors import SequentialProcessor
+from madmom.features.beats import RNNBeatProcessor, DBNBeatTrackingProcessor
+from madmom.features.downbeats import RNNDownBeatProcessor, DBNDownBeatTrackingProcessor
 
 AUDIO_EXTS = (".wav", ".flac", ".mp3", ".ogg", ".m4a")
 
@@ -105,9 +129,15 @@ def main() -> int:
 
     # Initialize madmom processor
     if args.downbeats:
-        tracker = DBNDownBeatTrackingProcessor(fps=args.fps)
+        rnn = RNNDownBeatProcessor()
+        # Enable 3/4 and 4/4 time signatures!
+        dbn = DBNDownBeatTrackingProcessor(beats_per_bar=[3, 4], fps=args.fps)
+        tracker = SequentialProcessor([rnn, dbn])
     else:
-        tracker = DBNBeatTrackingProcessor(fps=args.fps)
+        rnn = RNNBeatProcessor()
+        dbn = DBNBeatTrackingProcessor(fps=args.fps)
+        tracker = SequentialProcessor([rnn, dbn])
+    
     print(f"Loaded madmom {'downbeat' if args.downbeats else 'beat'} tracker.", flush=True)
 
     fieldnames = ["track_id", "audio_path", "n_gt_beats", "n_pred_beats",
@@ -152,20 +182,19 @@ def main() -> int:
             row["n_gt_downbeats"] = int(len(gt_downbeats))
 
             t0 = time.perf_counter()
-            activations = tracker(audio_path)
+            # Convert Path to string for madmom!
+            activations = tracker(str(audio_path))
             row["infer_seconds"] = round(time.perf_counter() - t0, 3)
 
-            # activations is Nx2: (time, probability)
-            est_times = activations[:, 0]
-            
-            # For beat tracking: all activations are beats
-            # For downbeat tracking: activations with probability > 0.5 are downbeats
             if args.downbeats:
-                pred_beats = est_times  # all activations as beats
-                pred_downbeats = est_times[activations[:, 1] > 0.5]
+                # DBNDownBeatTrackingProcessor returns (time, beat_number)
+                # Beat numbers are 1, 2, 3, 4. Downbeats are where beat_number == 1.
+                pred_beats = activations[:, 0]
+                pred_downbeats = activations[activations[:, 1] == 1, 0]
             else:
-                pred_beats = est_times
-                pred_downbeats = np.array([])  # no downbeats in beat mode
+                # DBNBeatTrackingProcessor returns just a 1D array of times
+                pred_beats = activations
+                pred_downbeats = np.array([])
 
             pred_beats = np.asarray(pred_beats, dtype=np.float64)
             pred_downbeats = np.asarray(pred_downbeats, dtype=np.float64)

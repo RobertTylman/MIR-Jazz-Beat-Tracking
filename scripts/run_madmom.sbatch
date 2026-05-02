@@ -28,9 +28,9 @@ singularity exec --nv \
   --overlay /scratch/yd3245/training_project/overlay-25GB.ext3:ro \
   /share/apps/images/cuda12.1.1-cudnn8.9.0-devel-ubuntu22.04.2.sif \
   /bin/bash -c "source /ext3/miniconda3/bin/activate; \
-    python dummy_gpu.py & \
+    python scripts/dummy_gpu.py & \
     DUMMY_PID=\$!; \
-    python evaluate_madmom.py --data-root /scratch/yd3245/mir_datasets/jtd/annotations --audio-root /scratch/rht9410/jtd_data --output results/madmom_jtd.csv --downbeats; \
+    python scripts/evaluate_madmom.py --data-root /scratch/yd3245/mir_datasets/jtd/annotations --audio-root /scratch/rht9410/jtd_data --output results/madmom_jtd.csv --downbeats; \
     kill \$DUMMY_PID"
 
 echo "Evaluation finished!"

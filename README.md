@@ -30,11 +30,19 @@ Each performance directory within the database contains:
 
 ## Repository contents
 
-- `run_beat_this.py` — wrapper for running Beat This! inference on an audio file.
-- `support_function.py` — plotting utility for visualizing predicted beats/downbeats over a waveform.
-- `run.ipynb` — example notebook demonstrating end-to-end inference.
-- `beat_this/` — the upstream Beat This! repository, vendored for fine-tuning.
-- `test_audio/` — short clips for sanity-checking inference.
+- `evaluation/` — model-specific analysis notebooks and evaluation CSVs.
+  - `graphs-beatthis.ipynb`: Visualization and metric analysis for Beat This!.
+  - `graphs-madmom.ipynb`: Visualization and metric analysis for madmom.
+  - `inference_test.ipynb`: Interactive sandbox for testing model inference.
+  - `csvs/`: Raw evaluation metrics in CSV format.
+- `scripts/` — support scripts for evaluation and inference.
+  - `run_beat_this.py`: Wrapper for Beat This! inference.
+  - `evaluate_jtd.py`: Full dataset evaluation for Beat This!.
+  - `evaluate_madmom.py`: Full dataset evaluation for madmom.
+  - `support_function.py`: Plotting utilities.
+- `beat_this/` — core model implementation and checkpoints.
+- `jazz-trio-database-v02/` — dataset annotations.
+- `test_audio/` — sample audio clips for inference testing.
 
 ## Advisor
 

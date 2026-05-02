@@ -27,9 +27,9 @@ singularity exec --nv \
   --bind /scratch:/scratch \
   --overlay /scratch/yd3245/training_project/overlay-25GB.ext3:ro \
   /share/apps/images/cuda12.1.1-cudnn8.9.0-devel-ubuntu22.04.2.sif \
-  /bin/bash -c "source /ext3/miniconda3/bin/activate && \
+  /bin/bash -c "source /ext3/miniconda3/bin/activate; \
     python -c 'import torch, time; print(\"Starting dummy GPU keep-alive...\"); [torch.matmul(torch.randn(2048, 2048, device=\"cuda\"), torch.randn(2048, 2048, device=\"cuda\")) or time.sleep(1.0) for _ in range(999999)]' & \
-    DUMMY_PID=\$! && \
+    DUMMY_PID=\$!; \
     python evaluate_madmom.py --data-root /scratch/yd3245/mir_datasets/jtd/annotations --audio-root /scratch/rht9410/jtd_data --output results/madmom_jtd.csv --downbeats; \
     kill \$DUMMY_PID"
 

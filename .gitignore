@@ -2,5 +2,6 @@ jazz-trio-database-v02
 __pycache__/
 *.pyc
 slurm-*.out
+madmom_*.out
+madmom_*.err
 results/madmom_jtd.csv
-run_madmom.sbatch

@@ -27,7 +27,7 @@ singularity exec \
   --bind /scratch:/scratch \
   --overlay /scratch/yd3245/training_project/overlay-25GB.ext3:ro \
   /share/apps/images/cuda12.1.1-cudnn8.9.0-devel-ubuntu22.04.2.sif \
-  /bin/bash -c "source /ext3/miniconda3/bin/activate && python scripts/evaluate_madmom.py --data-root /scratch/yd3245/mir_datasets/jtd/annotations --audio-root /scratch/rht9410/jtd_data --output results/madmom_jtd.csv --downbeats"
+  /bin/bash -c "source /ext3/miniconda3/bin/activate && python scripts/evaluate_madmom.py --data-root /scratch/yd3245/mir_datasets/jtd/annotations --audio-root /scratch/rht9410/jtd_data --output evaluation/csvs/madmom_jtd.csv --downbeats --include-from scripts/remaining_tracks.txt --force"
 
 echo "Evaluation finished!"
 date

@@ -109,6 +109,12 @@ def main() -> int:
     p.add_argument("--fps", type=int, default=100,
                    help="Processing FPS (default: 100).")
     p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--include", nargs="+", help="Only evaluate these track IDs.")
+    p.add_argument("--exclude", nargs="+", help="Skip these track IDs.")
+    p.add_argument("--include-from", type=Path, help="File containing track IDs to evaluate (one per line).")
+    p.add_argument("--exclude-from", type=Path, help="File containing track IDs to skip (one per line).")
+    p.add_argument("--match", help="Only evaluate track IDs containing this string.")
+    p.add_argument("--force", action="store_true", help="Re-evaluate even if track is already in output.")
     args = p.parse_args()
 
     if not args.data_root.is_dir():
@@ -119,13 +125,33 @@ def main() -> int:
 
     track_dirs = sorted(d for d in args.data_root.iterdir()
                         if d.is_dir() and (d / "beats.csv").is_file())
+    
+    # Apply include/exclude filters
+    if args.include:
+        track_dirs = [d for d in track_dirs if d.name in args.include]
+    if args.include_from:
+        with args.include_from.open() as f:
+            include_set = {line.strip() for line in f if line.strip()}
+        track_dirs = [d for d in track_dirs if d.name in include_set]
+    
+    if args.exclude:
+        track_dirs = [d for d in track_dirs if d.name not in args.exclude]
+    if args.exclude_from:
+        with args.exclude_from.open() as f:
+            exclude_set = {line.strip() for line in f if line.strip()}
+        track_dirs = [d for d in track_dirs if d.name not in exclude_set]
+
+    if args.match:
+        track_dirs = [d for d in track_dirs if args.match in d.name]
+
     if args.limit:
         track_dirs = track_dirs[:args.limit]
-    print(f"Found {len(track_dirs)} track directories.", flush=True)
+    print(f"Found {len(track_dirs)} track directories to process.", flush=True)
 
     done = already_done(args.output)
-    if done:
-        print(f"Resuming: {len(done)} tracks already in {args.output}.", flush=True)
+    if done and not args.force:
+        print(f"Resuming: {len(done)} tracks already in {args.output}. Use --force to re-evaluate.", flush=True)
+
 
     # Initialize madmom processor
     if args.downbeats:
@@ -155,7 +181,7 @@ def main() -> int:
     n_ok = n_skip = n_fail = 0
     for i, tdir in enumerate(track_dirs, 1):
         track_id = tdir.name
-        if track_id in done:
+        if track_id in done and not args.force:
             n_skip += 1
             continue
 

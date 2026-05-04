@@ -9,6 +9,7 @@ from pathlib import Path
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.loggers import WandbLogger
 
 from beat_this.dataset.dataset import BeatDataModule
 from beat_this.model.pl_module import PLBeatThis
@@ -42,6 +43,8 @@ def parse_args() -> argparse.Namespace:
         default=1,
         help="Number of best checkpoints (by val_F-measure_beat) to keep.",
     )
+    p.add_argument("--wandb-project", default=None, help="W&B project name. If unset, disables W&B logging.")
+    p.add_argument("--wandb-run-name", default=None, help="Optional W&B run name.")
     return p.parse_args()
 
 
@@ -108,6 +111,15 @@ def main() -> int:
         mode="max",
         patience=args.patience,
     )
+    logger = None
+    if args.wandb_project:
+        logger = WandbLogger(
+            project=args.wandb_project,
+            name=args.wandb_run_name,
+            save_dir=str(out_dir),
+            log_model=True,
+        )
+        logger.log_hyperparams(vars(args))
 
     trainer = pl.Trainer(
         accelerator=args.accelerator,
@@ -118,6 +130,7 @@ def main() -> int:
         default_root_dir=str(out_dir),
         callbacks=[ckpt_cb, es_cb],
         log_every_n_steps=25,
+        logger=logger,
     )
 
     trainer.fit(model, datamodule=dm)

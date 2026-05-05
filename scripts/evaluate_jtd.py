@@ -124,6 +124,8 @@ def main() -> int:
                    help="Use float16 inference (GPU recommended).")
     p.add_argument("--limit", type=int, default=None,
                    help="Only evaluate the first N tracks (for smoke tests).")
+    p.add_argument("--track-ids-file", type=Path, default=None,
+                   help="Optional newline-delimited track IDs to evaluate (test-only subset).")
     p.add_argument("--save-preds-dir", type=Path, default=None,
                    help="If set, write predicted beats/downbeats per track here.")
     args = p.parse_args()
@@ -138,6 +140,19 @@ def main() -> int:
 
     track_dirs = sorted(d for d in args.data_root.iterdir()
                         if d.is_dir() and (d / "beats.csv").is_file())
+    if args.track_ids_file:
+        if not args.track_ids_file.is_file():
+            sys.exit(f"--track-ids-file not found: {args.track_ids_file}")
+        wanted = {
+            line.strip()
+            for line in args.track_ids_file.read_text().splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        }
+        track_dirs = [d for d in track_dirs if d.name in wanted]
+        print(
+            f"Applied track-id filter: {len(track_dirs)} tracks from {args.track_ids_file}.",
+            flush=True,
+        )
     if args.limit:
         track_dirs = track_dirs[:args.limit]
     print(f"Found {len(track_dirs)} track directories.", flush=True)

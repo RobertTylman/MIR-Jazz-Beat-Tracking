@@ -1,4 +1,4 @@
-# MIR-Jazz-Beat-Tracking
+# Learning the Groove: Fine-Tuning Beat Tracking on the Jazz Trio Dataset
 
 Improving automatic beat and downbeat tracking for jazz music.
 

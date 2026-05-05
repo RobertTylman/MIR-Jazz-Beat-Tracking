@@ -1,24 +1,5 @@
 # MIR-Jazz-Beat-Tracking
 
-## TODOs
-
-- [ ] Build Beat This!-formatted JTD training data:
-```bash
-python scripts/build_jtd_beatthis_dataset.py \
-  --jtd-root jazz-trio-database-v02 \
-  --audio-root /path/to/jtd-audio \
-  --out-root data/beatthis_jtd
-```
-- [ ] Fine-tune Beat This! on JTD:
-```bash
-python scripts/finetune_beat_this_jtd.py \
-  --data-dir data/beatthis_jtd \
-  --checkpoint beat_this/checkpoint/final0.ckpt \
-  --output-dir checkpoints/jtd_finetune \
-  --accelerator gpu \
-  --devices 1
-```
-
 Improving automatic beat and downbeat tracking for jazz music.
 
 Most state-of-the-art beat trackers are trained on pop, rock, and electronic music, where the pulse is steady and the timing is quantized. Jazz is harder: swing feel, expressive rubato, brushed drums, walking bass, and frequent tempo modulation all push these models out of distribution. This project measures how badly existing models break on jazz, and then asks whether we can fix it by training on jazz data directly.

@@ -31,6 +31,10 @@ Most state-of-the-art beat trackers are trained on pop, rock, and electronic mus
 
 For comparison, we also evaluate other widely used beat trackers — `librosa` and [Beat This!](https://github.com/CPJKU/beat_this) — under the same protocol.
 
+## Split-test comparison
+
+![Split-test comparison across Beat This! finetuned, Beat This! baseline, and madmom](evaluation/img/split_comparison_metric_bars_available.png)
+
 ## Dataset
 
 The **Jazz Trio Database** (Cheston et al., 2024) is a corpus of jazz piano-trio recordings (piano, bass, drums) with frame-level annotations for beats, downbeats, and per-instrument onsets.

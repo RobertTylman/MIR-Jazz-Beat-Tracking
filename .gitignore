@@ -5,3 +5,25 @@ slurm-*.out
 madmom_*.out
 madmom_*.err
 results/madmom_jtd.csv
+.DS_Store
+evaluation/audio/.DS_Store
+evaluation/audio/worst_finetuned_test/.DS_Store
+evaluation/audio/worst_finetuned_test/with_predicted_clicks/
+evaluation/audio/worst_finetuned_test/with_ground_truth_clicks/
+
+# Generated images/photos
+evaluation/img/
+*.jpg
+*.jpeg
+*.heic
+*.webp
+*.tif
+*.tiff
+evaluation/img
+evaluation/img/split_comparison_metric_bars.png
+evaluation/img/split_comparison_delta_scatter.png
+evaluation/img/split_comparison_f_measure_boxplots.png
+evaluation/img/split_comparison_metric_bars_available_beat.png
+evaluation/img/split_comparison_metric_bars_available_downbeat.png
+evaluation/img/split_comparison_metric_bars_available.png
+evaluation/img/split_comparison_metric_bars.png

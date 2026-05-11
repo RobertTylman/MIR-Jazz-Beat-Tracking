@@ -6,11 +6,10 @@ Most state-of-the-art beat trackers are trained on pop, rock, and electronic mus
 
 ## Aim
 
-1. **Benchmark** the existing [madmom](https://github.com/CPJKU/madmom) beat tracking model on the [Jazz Trio Database](https://zenodo.org/records/13828030) to establish a baseline for how well a general-purpose tracker handles jazz.
-2. **Retrain / fine-tune** the model on the Jazz Trio Database.
-3. **Re-evaluate** the retrained model against the same baseline to quantify the improvement.
-
-For comparison, we also evaluate other widely used beat trackers — `librosa` and [Beat This!](https://github.com/CPJKU/beat_this) — under the same protocol.
+1. **Benchmark** the existing [Beat This!](https://github.com/CPJKU/beat_this) beat tracking model on the [Jazz Trio Database]
+2. **Benchmark** the existing [madmom](https://github.com/CPJKU/madmom) beat tracking model on the [Jazz Trio Database](https://zenodo.org/records/13828030) to establish a baseline for how well a general-purpose tracker handles jazz.
+3. **Retrain / fine-tune** the model on the Jazz Trio Database.
+4. **Re-evaluate** the retrained model against the same baseline to quantify the improvement.
 
 ## Split-test comparison
 
